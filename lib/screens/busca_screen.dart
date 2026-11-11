@@ -4,6 +4,11 @@ import '../providers/app_provider.dart';
 import 'detalhes_screen.dart';
 import 'favoritos_screen.dart';
 
+// ============================================================================
+// TELA 2: BUSCA E CATÁLOGO DE ALIMENTOS NA API (busca_screen.dart)
+// ============================================================================
+// REQUISITO 1: Tela 2 do aplicativo.
+// Integra o campo de pesquisa com o Provider e renderiza os resultados da API.
 class BuscaScreen extends StatefulWidget {
   const BuscaScreen({super.key});
 
@@ -20,21 +25,34 @@ class _BuscaScreenState extends State<BuscaScreen> {
     super.dispose();
   }
 
+  // Dispara a busca remota no Provider
   void _realizarBusca() {
     final termo = _buscaController.text.trim();
     if (termo.isNotEmpty) {
+      // listen: false porque estamos dentro de uma função de callback (não precisamos redesenhar aqui)
       Provider.of<AppProvider>(context, listen: false).buscarProdutos(termo);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // REQUISITO 7: Ouve as alterações do Provider (reconstrói a tela quando isLoading ou lista mudar)
     final provider = Provider.of<AppProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Explorar alimentos (API)'),
         actions: [
+          // BÔNUS: Botão de Tema Sol (Claro) / Lua (Escuro)
+          IconButton(
+            tooltip: provider.isDarkMode ? 'Tema Claro' : 'Tema Escuro',
+            icon: Icon(
+              provider.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+              color: provider.isDarkMode ? Colors.amber : const Color(0xFF247A51),
+            ),
+            onPressed: () => provider.alternarTema(),
+          ),
+          // REQUISITO 1: Navegação para a Tela 4 (Favoritos) via Navigator.push
           IconButton(
             tooltip: 'Favoritos',
             icon: const Icon(Icons.favorite, color: Colors.redAccent),
@@ -43,10 +61,14 @@ class _BuscaScreenState extends State<BuscaScreen> {
               MaterialPageRoute(builder: (_) => const FavoritosScreen()),
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -68,9 +90,12 @@ class _BuscaScreenState extends State<BuscaScreen> {
               child: const Text('Buscar na API Open Food Facts'),
             ),
             const SizedBox(height: 22),
+            // ÁREA DE CONTEÚDO DINÂMICO: Trata Loading, Erro e Sucesso
             Expanded(
+              // REQUISITO 3: ESTADO DE LOADING VISÍVEL NA UI
               child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
+                  // REQUISITO 3: TRATAMENTO DE ERRO VISÍVEL NA UI (com retry e fallback)
                   : provider.erro != null
                       ? Center(
                           child: SingleChildScrollView(
@@ -110,6 +135,7 @@ class _BuscaScreenState extends State<BuscaScreen> {
                                 textAlign: TextAlign.center,
                               ),
                             )
+                          // REQUISITO 5: LISTAGEM DINÂMICA COM ListView.builder
                           : ListView.builder(
                               itemCount: provider.produtosBusca.length,
                               itemBuilder: (context, i) {
@@ -141,6 +167,8 @@ class _BuscaScreenState extends State<BuscaScreen> {
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 }

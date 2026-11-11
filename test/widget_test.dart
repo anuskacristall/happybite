@@ -1,7 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:happy_bite/main.dart';
+import 'package:happy_bite/models/produto.dart';
 import 'package:happy_bite/providers/app_provider.dart';
+import 'package:happy_bite/screens/detalhes_screen.dart';
 
 void main() {
   testWidgets('HappyBiteApp inicializa com a tela de cadastro', (WidgetTester tester) async {
@@ -15,7 +19,79 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Happy Bite'), findsWidgets);
-    expect(find.text('Comer bem começa aqui!'), findsOneWidget);
+    expect(find.text('Como podemos te chamar?'), findsOneWidget);
+    expect(find.text('Digite seu nome'), findsOneWidget);
+  });
+
+  testWidgets('DetalhesScreen exibe Alerta de Restrição quando produto Oreo contém Glúten', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final provider = AppProvider();
+    await provider.salvarCadastro('Anuska', ['Glúten']);
+
+    final produtoOreo = Produto(
+      codigo: '7622210449283',
+      nome: 'Biscoito Recheado Oreo',
+      marca: 'Mondelez',
+      ingredientes: 'Farinha de trigo, açúcar, gordura vegetal, cacau em pó...',
+      nutricional: 'Nutri-Score: E',
+      alergenicos: 'gluten, soja',
+      imagemUrl: '',
+      notaDesrotulando: 2.5,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppProvider>.value(value: provider),
+        ],
+        child: MaterialApp(
+          home: DetalhesScreen(produto: produtoOreo),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alerta de Restrição!'), findsOneWidget);
+    expect(find.textContaining('Glúten'), findsWidgets);
+    expect(find.text('Produto Seguro para Você!'), findsNothing);
+  });
+
+  test('Produto.possuiFichaCompleta valida presença obrigatória de nome, ingredientes e alergênicos', () {
+    final produtoCompleto = Produto(
+      codigo: '123',
+      nome: 'Biscoito Integral',
+      marca: 'Marca Exemplo',
+      ingredientes: 'Farinha de trigo integral, água, sal.',
+      nutricional: 'Nutri-Score: A',
+      alergenicos: 'Contém glúten.',
+      imagemUrl: '',
+      notaDesrotulando: 8.5,
+    );
+    expect(produtoCompleto.possuiFichaCompleta, isTrue);
+
+    final produtoSemIngredientes = Produto(
+      codigo: '124',
+      nome: 'Biscoito Sem Ingredientes',
+      marca: 'Marca Exemplo',
+      ingredientes: 'Ingredientes não informados em português.',
+      nutricional: 'Nutri-Score: C',
+      alergenicos: 'Glúten',
+      imagemUrl: '',
+      notaDesrotulando: 6.0,
+    );
+    expect(produtoSemIngredientes.possuiFichaCompleta, isFalse);
+
+    final produtoSemAlergenicos = Produto(
+      codigo: '125',
+      nome: 'Biscoito Sem Alergênicos Informados',
+      marca: 'Marca Exemplo',
+      ingredientes: 'Farinha de trigo, açúcar, sal.',
+      nutricional: 'Nutri-Score: C',
+      alergenicos: 'Nenhum alergênico declarado',
+      imagemUrl: '',
+      notaDesrotulando: 6.0,
+    );
+    expect(produtoSemAlergenicos.possuiFichaCompleta, isFalse);
   });
 }
+

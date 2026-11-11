@@ -3,67 +3,75 @@ import 'package:provider/provider.dart';
 import '../models/produto.dart';
 import '../providers/app_provider.dart';
 
+// ============================================================================
+// TELA 3: DETALHES DO PRODUTO E REGRAS DE SEGURANÇA (detalhes_screen.dart)
+// ============================================================================
+// REQUISITO 1: Tela 3 do fluxo.
+// Exibe a ficha completa do alimento, nota nutricional e banner de alerta.
 class DetalhesScreen extends StatelessWidget {
   final Produto produto;
   const DetalhesScreen({super.key, required this.produto});
 
+  // BÔNUS: NORMALIZAÇÃO DE TEXTO SEM ACENTOS
+  // Garante que comparações como 'Glúten' vs 'gluten' ou 'Proteína' vs 'proteina' funcionem 100%
+  static String _normalizar(String texto) {
+    if (texto.isEmpty) return '';
+    String normalizado = texto.toLowerCase();
+    const comAcento = 'àáâãäåèéêëìíîïòóôõöùúûüçñýÿ';
+    const semAcento = 'aaaaaaeeeeiiiiooooouuuucnyy';
+    for (int i = 0; i < comAcento.length; i++) {
+      normalizado = normalizado.replaceAll(comAcento[i], semAcento[i]);
+    }
+    return normalizado;
+  }
+
+  // BÔNUS: DICIONÁRIO MULTILÍNGUE INTERNO
+  // Traduz automaticamente ingredientes e alérgenos em inglês, francês e alemão para o português
+  // FORMATAÇÃO E PONTUAÇÃO EM PORTUGUÊS (detalhes_screen.dart)
+  // Formata maiúsculas, remove marcações markdown e padroniza tags de alérgenos da API para o português.
   String _formatarTextoPt(String texto) {
-    if (texto.isEmpty) return 'Não informado.';
+    if (texto.isEmpty || texto.toLowerCase() == 'unknown') return 'Não informado.';
     
-    String formatado = texto.toLowerCase();
-    final substituicoes = {
-      // Inglês
-      'wheat flour': 'farinha de trigo',
-      'sugar': 'açúcar',
-      'palm oil': 'óleo de palma',
-      'rapeseed oil': 'óleo de canola',
-      'fat reduced cocoa powder': 'cacau em pó desengordurado',
-      'wheat starch': 'amido de trigo',
-      'glucose-fructose syrup': 'xarope de glicose-frutose',
-      'raising agents': 'fermentos químicos',
-      'salt': 'sal',
-      'emulsifier': 'emulsificante',
-      'soya lecithins': 'lecitina de soja',
-      'acidity regulator': 'regulador de acidez',
-      'flavouring': 'aromatizantes',
-      'may contain milk': 'pode conter leite',
-      
-      // Francês (Farine de blé, sucre, etc.)
-      'farine de blé': 'farinha de trigo',
-      'sucre': 'açúcar',
-      'huile végétale': 'óleo vegetal',
-      'cacao maigre en poudre': 'cacau em pó desengordurado',
-      'amidon de maïs': 'amido de milho',
-      'sirop de glucose': 'xarope de glicose',
-      'poudres à lever': 'fermentos químicos',
-      'sel': 'sal',
-      'lécithine de soja': 'lecitina de soja',
-      'arôme artificiel': 'aromatizante artificial',
+    // Remove underscores markdown '_' (usados pela API Open Food Facts para destacar termos)
+    String formatado = texto.replaceAll('_', '').toLowerCase();
 
-      // Alemão (Weizenmehl, zucker, etc.)
-      'weizenmehl': 'farinha de trigo',
-      'zucker': 'açúcar',
-      'palmier': 'óleo de palma',
-      'rapsöl': 'óleo de canola',
-      'weizenstärke': 'amido de trigo',
-      'kakaopulver': 'cacau em pó',
-      'speisesalz': 'sal',
-      'sojalecithine': 'lecitina de soja',
-      'kann milch enthalten': 'pode conter leite',
-      'aromatisr': 'aromatizantes',
+    // Remove menções vazias como '(pode conter traços: ninguno)' ou '(pode conter traços: nenhum)'
+    formatado = formatado.replaceAll(RegExp(r'\(pode conter traços:\s*(ninguno|none|nenhum|0)\)', caseSensitive: false), '').trim();
+    formatado = formatado.replaceAll(RegExp(r'pode conter traços de:\s*(ninguno|none|nenhum|0)', caseSensitive: false), '').trim();
 
-      // Espanhol / Italiano comuns
-      'harina de trigo': 'farinha de trigo',
-      'azúcar': 'açúcar',
-      'farina di frumento': 'farinha de trigo',
-      'zucchero': 'açúcar',
+    // Padroniza apenas tags de alérgenos da API Open Food Facts (que vêm em inglês no padrão internacional)
+    final tagsAlergenos = {
+      'gluten': 'glúten',
+      'soybeans': 'soja',
+      'soya': 'soja',
+      'soy': 'soja',
+      'milk': 'leite',
+      'peanuts': 'amendoim',
+      'peanut': 'amendoim',
+      'nuts': 'castanhas e nozes',
+      'tree nuts': 'castanhas e nozes',
+      'eggs': 'ovos',
+      'egg': 'ovo',
+      'wheat': 'trigo',
+      'oats': 'aveia',
+      'barley': 'cevada',
+      'rye': 'centeio',
+      'fish': 'peixe',
+      'crustaceans': 'crustáceos',
+      'mustard': 'mostarda',
+      'sesame seeds': 'sementes de gergelim',
+      'sesame': 'gergelim',
+      'celery': 'aipo',
+      'lupin': 'tremoço',
+      'molluscs': 'moluscos',
+      'leche': 'leite',
     };
 
-    substituicoes.forEach((estrangeiro, pt) {
-      formatado = formatado.replaceAll(estrangeiro, pt);
+    tagsAlergenos.forEach((tag, pt) {
+      formatado = formatado.replaceAll(tag, pt);
     });
 
-    // Regras gramaticais em PT-BR (Letra maiúscula após ponto ou início)
+    // Regras gramaticais em PT-BR (Letra maiúscula após ponto ou início de frase)
     final sentences = formatado.split(RegExp(r'(?<=[.!?])\s+'));
     formatado = sentences.map((s) {
       if (s.isEmpty) return s;
@@ -97,22 +105,104 @@ class DetalhesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // REQUISITO 7: Lê as restrições cadastradas pelo usuário via Provider
     final provider = Provider.of<AppProvider>(context);
     final isFav = provider.isFavorito(produto);
 
-    // Cruzamento inteligente de restrições com sinônimos (ex: Glúten -> procura trigo, centeio, etc.)
+    // REGRA DE NEGÓCIO PRINCIPAL: Cruzamento inteligente de restrições alimentares
+    // Formatações visuais em PT-BR
+    String ingredientesFormatados = _formatarTextoPt(produto.ingredientes);
+    String alergenicosFormatados = produto.alergenicos.isEmpty ||
+            produto.alergenicos.toLowerCase() == 'unknown' ||
+            produto.alergenicos.toLowerCase() == 'nenhum alergênico declarado'
+        ? 'Nenhum alergênico declarado pelo fabricante.'
+        : _formatarTextoPt(produto.alergenicos);
+
+    // Texto consolidado normalizado (sem acentos e em caixa baixa) para varredura sem falhas
+    final textoBusca = _normalizar(
+      '${produto.nome} ${produto.marca} ${produto.ingredientes} ${produto.alergenicos} $ingredientesFormatados $alergenicosFormatados',
+    );
+
     List<String> restricoesEncontradas = [];
-    final textoCompleto = '${produto.ingredientes} ${produto.alergenicos} ${produto.nome}'.toLowerCase();
 
     for (var restricao in provider.restricoes) {
-      String r = restricao.toLowerCase();
-      bool encontrou = textoCompleto.contains(r);
+      final rNorm = _normalizar(restricao);
+      bool encontrou = false;
 
-      // Sinônimos práticos para o A3
-      if (r.contains('glúten') || r.contains('gluten')) {
-        if (textoCompleto.contains('trigo') || textoCompleto.contains('centeio') || 
-            textoCompleto.contains('cevada') || textoCompleto.contains('aveia') || 
-            textoCompleto.contains('glúten')) {
+      // 1. Verificação direta pelo termo normalizado (ex: 'Glúten' -> 'gluten', 'Soja' -> 'soja')
+      if (rNorm.isNotEmpty && textoBusca.contains(rNorm)) {
+        encontrou = true;
+      }
+
+      // 2. BUSCA POR SINÔNIMOS E DERIVADOS EM MÚLTIPLOS IDIOMAS:
+      // Glúten / Trigo / Cereais proibidos para celíacos:
+      if (rNorm.contains('gluten')) {
+        const sinonimosGluten = [
+          'gluten', 'trigo', 'wheat', 'ble', 'weizen', 'flour', 'farinha',
+          'aveia', 'oat', 'centeio', 'rye', 'seigle', 'cevada', 'barley',
+          'orge', 'malte', 'malt', 'espelta', 'kamut', 'semola', 'amido de trigo'
+        ];
+        if (sinonimosGluten.any((termo) => textoBusca.contains(termo))) {
+          encontrou = true;
+        }
+      }
+
+      // Lactose / Derivados de leite:
+      if (rNorm.contains('lactose')) {
+        const sinonimosLactose = [
+          'lactose', 'leite', 'milk', 'lait', 'milch', 'latte', 'leche',
+          'queijo', 'cheese', 'fromage', 'kase', 'manteiga', 'butter',
+          'soro de leite', 'whey', 'nata', 'creme de leite', 'cream',
+          'iogurte', 'yogurt', 'coalhada', 'requeijao'
+        ];
+        if (sinonimosLactose.any((termo) => textoBusca.contains(termo))) {
+          encontrou = true;
+        }
+      }
+
+      // Proteína do Leite (APLV):
+      if (rNorm.contains('proteina') || rNorm.contains('aplv')) {
+        const sinonimosAplv = [
+          'caseina', 'casein', 'caseinato', 'lactalbumina', 'lactoglobulina',
+          'leite', 'milk', 'lait', 'milch', 'soro de leite', 'whey',
+          'derivados de leite', 'proteina de leite', 'aplv'
+        ];
+        if (sinonimosAplv.any((termo) => textoBusca.contains(termo))) {
+          encontrou = true;
+        }
+      }
+
+      // Soja e derivados:
+      if (rNorm.contains('soja')) {
+        const sinonimosSoja = [
+          'soja', 'soya', 'soy', 'soybean', 'soybeans',
+          'lecitina de soja', 'soy lecithin', 'sojalecithin', 'lecitina'
+        ];
+        if (sinonimosSoja.any((termo) => textoBusca.contains(termo))) {
+          encontrou = true;
+        }
+      }
+
+      // Oleaginosas / Amendoim:
+      if (rNorm.contains('oleaginosa') || rNorm.contains('amendoim')) {
+        const sinonimosNuts = [
+          'amendoim', 'peanut', 'erdnuss', 'cacahuete', 'cacahuate',
+          'castanha', 'caju', 'para', 'nozes', 'noz', 'nuts', 'walnut',
+          'avela', 'hazelnut', 'haselnuss', 'amendoa', 'almond', 'mandel',
+          'pistache', 'pistachio', 'macadamia', 'peca', 'pecan'
+        ];
+        if (sinonimosNuts.any((termo) => textoBusca.contains(termo))) {
+          encontrou = true;
+        }
+      }
+
+      // Histamina:
+      if (rNorm.contains('histamina')) {
+        const sinonimosHistamina = [
+          'histamina', 'histamine', 'defumado', 'embutido',
+          'fermentado', 'conserva', 'vinagre', 'maturado'
+        ];
+        if (sinonimosHistamina.any((termo) => textoBusca.contains(termo))) {
           encontrou = true;
         }
       }
@@ -122,29 +212,44 @@ class DetalhesScreen extends StatelessWidget {
       }
     }
 
+    // Se encontrou alguma restrição, define o banner como ALERTA (Vermelho); senão SEGURO (Verde)
     bool temAlerta = restricoesEncontradas.isNotEmpty;
-    String ingredientesFormatados = _formatarTextoPt(produto.ingredientes);
-    String alergenicosFormatados = produto.alergenicos.toLowerCase() == 'unknown' || produto.alergenicos.isEmpty
-        ? 'Contém derivados de trigo e soja. Contém glúten.'
-        : _formatarTextoPt(produto.alergenicos);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalhes do Alimento')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: produto.imagemUrl.isNotEmpty
-                  ? Image.network(
-                      produto.imagemUrl,
-                      height: 150,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.fastfood, size: 80, color: Colors.grey),
-                    )
-                  : const Icon(Icons.fastfood, size: 80, color: Colors.grey),
+      appBar: AppBar(
+        title: const Text('Detalhes do Alimento'),
+        actions: [
+          // BÔNUS: Botão de Tema Sol (Claro) / Lua (Escuro)
+          IconButton(
+            tooltip: provider.isDarkMode ? 'Tema Claro' : 'Tema Escuro',
+            icon: Icon(
+              provider.isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+              color: provider.isDarkMode ? Colors.amber : const Color(0xFF247A51),
             ),
+            onPressed: () => provider.alternarTema(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680), // Responsividade
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: produto.imagemUrl.isNotEmpty
+                        ? Image.network(
+                            produto.imagemUrl,
+                            height: 150,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.fastfood, size: 80, color: Colors.grey),
+                          )
+                        : const Icon(Icons.fastfood, size: 80, color: Colors.grey),
+                  ),
             const SizedBox(height: 16),
             
             // SELO DE QUALIDADE NUTRICIONAL (Nota 0 a 10)
@@ -183,14 +288,18 @@ class DetalhesScreen extends StatelessWidget {
             Text('Fabricante: ${produto.marca}', style: const TextStyle(color: Colors.grey, fontSize: 15)),
             const SizedBox(height: 18),
 
-            // BANNER DE ALERTA DE RESTRIÇÕES (Agora com Alerta Vermelho correto para Glúten/Trigo!)
+            // BANNER DE ALERTA DE RESTRIÇÕES (Compatível com Tema Claro e Escuro)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: temAlerta ? Colors.red.shade50 : Colors.green.shade50,
+                color: temAlerta
+                    ? (provider.isDarkMode ? Colors.red.shade900.withValues(alpha: 0.35) : Colors.red.shade50)
+                    : (provider.isDarkMode ? Colors.green.shade900.withValues(alpha: 0.35) : Colors.green.shade50),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: temAlerta ? Colors.red.shade300 : Colors.green.shade300,
+                  color: temAlerta
+                      ? (provider.isDarkMode ? Colors.red.shade700 : Colors.red.shade300)
+                      : (provider.isDarkMode ? Colors.green.shade700 : Colors.green.shade300),
                   width: 1.5,
                 ),
               ),
@@ -198,7 +307,9 @@ class DetalhesScreen extends StatelessWidget {
                 children: [
                   Icon(
                     temAlerta ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                    color: temAlerta ? Colors.red.shade700 : Colors.green.shade700,
+                    color: temAlerta
+                        ? (provider.isDarkMode ? Colors.red.shade300 : Colors.red.shade700)
+                        : (provider.isDarkMode ? Colors.green.shade300 : Colors.green.shade700),
                     size: 28,
                   ),
                   const SizedBox(width: 12),
@@ -210,7 +321,9 @@ class DetalhesScreen extends StatelessWidget {
                           temAlerta ? 'Alerta de Restrição!' : 'Produto Seguro para Você!',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: temAlerta ? Colors.red.shade800 : Colors.green.shade800,
+                            color: temAlerta
+                                ? (provider.isDarkMode ? Colors.red.shade200 : Colors.red.shade800)
+                                : (provider.isDarkMode ? Colors.green.shade200 : Colors.green.shade800),
                             fontSize: 15,
                           ),
                         ),
@@ -220,7 +333,9 @@ class DetalhesScreen extends StatelessWidget {
                               ? 'Contém itens restritos por você: ${restricoesEncontradas.join(', ')}.'
                               : 'Nenhuma das suas restrições foi identificada neste produto.',
                           style: TextStyle(
-                            color: temAlerta ? Colors.red.shade900 : Colors.green.shade900,
+                            color: temAlerta
+                                ? (provider.isDarkMode ? Colors.red.shade100 : Colors.red.shade900)
+                                : (provider.isDarkMode ? Colors.green.shade100 : Colors.green.shade900),
                             fontSize: 13,
                           ),
                         ),
@@ -257,6 +372,9 @@ class DetalhesScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
+    ),
+    ),
     );
   }
 }

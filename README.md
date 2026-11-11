@@ -107,9 +107,13 @@ lib/
   - A API pública do *Open Food Facts* é colaborativa mundialmente; alguns produtos cadastrados na Europa não possuem tradução completa dos ingredientes para o português.
   - Requer conexão com a internet para realizar novas buscas no banco de dados remoto da API.
 - **Bônus e Funcionalidades Extras Implementadas:**
+  - **Tema Claro e Escuro (Light/Dark Mode):** Alternância instantânea com botão de Sol/Lua presente em todas as 4 telas, com persistência da preferência no `SharedPreferences` e adaptação completa de contraste.
+  - **Animações Interativas:** Revelação dinâmica e expansão suave das opções de intolerâncias (`AnimatedSize` + `AnimatedSlide`), sem efeito fade, garantindo fluidez e excelente UI/UX.
+  - **Validação com Regex:** Validação de nome exigindo no mínimo 3 caracteres e bloqueando números ou caracteres especiais (`[!@#\$%^&*()_+={}\[\]...]`).
+  - **Tratativa e Higienização de Dados (Client-side Data Sanitization):** Filtro rigoroso no `AppProvider` que descarta alimentos incompletos (sem lista de ingredientes ou sem alérgenos/traços declarados), produtos em outros idiomas e duplicatas por código de barras, entregando sempre uma listagem limpa, confiável e em língua portuguesa.
   - **Selo de Qualidade Nutricional (0 a 10):** Algoritmo que converte o *Nutri-Score* internacional (letras A a E) em uma nota contínua de saudabilidade inspirada no aplicativo *Desrotulando*.
   - **Dicionário Multilíngue de Ingredientes:** Mapeamento interno com mais de 30 termos técnicos em inglês, francês e alemão convertidos automaticamente para o português com formatação gramatical adequada.
-  - **Cruzamento Inteligente de Sinônimos:** Reconhecimento avançado de derivados (por exemplo: detecção de farinha de trigo, centeio, cevada e aveia quando a restrição marcada é Glúten).
+  - **Cruzamento Inteligente de Sinônimos:** Reconhecimento avançado de derivados para Glúten, Lactose, Proteína do Leite (APLV), Soja e Oleaginosas.
   - **Modo Demonstração (Fallback Resiliente):** Botão de contingência para apresentação caso haja queda de rede na sala de aula.
 - **O que ficou para próximas versões:**
   - Leitor de código de barras físico utilizando a câmera do smartphone (`mobile_scanner`).
