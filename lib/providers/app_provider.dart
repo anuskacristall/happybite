@@ -93,8 +93,11 @@ class AppProvider extends ChangeNotifier {
   }
 
   // BÔNUS: Detecta se o alimento é comercializado em países de língua portuguesa ou possui rótulo em português
-  // BÔNUS: Validação universal de idioma - aceita apenas português e descarta qualquer alimento estrangeiro
+  // BÔNUS: Validação universal de idioma - aceita apenas português e descarta qualquer alimento estrangeiro ou com lixo de OCR
   bool _ehEmPortugues(Map<String, dynamic> json, Produto produto) {
+    // 0. Descarta produtos com lixo de OCR nos ingredientes (escaneamento de tabela ou endereço da fábrica)
+    if (Produto.ehLixoOcr(produto.ingredientes)) return false;
+
     final lang = json['lang']?.toString().toLowerCase().trim() ?? '';
     final hasPtIng = json['ingredients_text_pt']?.toString().trim().isNotEmpty ?? false;
     final countries = json['countries']?.toString().toLowerCase() ?? '';
@@ -154,10 +157,11 @@ class AppProvider extends ChangeNotifier {
         'https://br.openfoodfacts.org/cgi/search.pl?search_terms=$termo&search_simple=1&action=process&json=1',
       );
       
-      // Chamada HTTP assíncrona com User-Agent para evitar bloqueios de rede
+      // Chamada HTTP assíncrona com User-Agent padrão de navegador para evitar bloqueios da API
+      const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) HappyBite/1.0';
       var response = await http.get(
         url,
-        headers: {'User-Agent': 'HappyBiteApp - Cotemig Academic Project'},
+        headers: {'User-Agent': userAgent},
       );
 
       // Fallback: se a base brasileira retornar erro de conexão, consulta o endpoint mundial
@@ -167,7 +171,7 @@ class AppProvider extends ChangeNotifier {
         );
         response = await http.get(
           url,
-          headers: {'User-Agent': 'HappyBiteApp - Cotemig Academic Project'},
+          headers: {'User-Agent': userAgent},
         );
       }
 

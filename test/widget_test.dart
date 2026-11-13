@@ -92,6 +92,20 @@ void main() {
       notaDesrotulando: 6.0,
     );
     expect(produtoSemAlergenicos.possuiFichaCompleta, isFalse);
+
+    // BÔNUS: Validação contra escaneamento imperfeito de OCR (ex: Batman Oreo da comunidade)
+    final produtoLixoOcr = Produto(
+      codigo: '7622300830151',
+      nome: 'Biscoito Original Batman Oreo Pacote 90g',
+      marca: 'Mondelez',
+      ingredientes: 'ANUTRICIONAL: Porção de 30 g (3 biscoitos): Vator energetico 145 kcal... Zona Rural... curtiu ego',
+      nutricional: 'Informação nutricional padrão',
+      alergenicos: 'Glúten, Soja',
+      imagemUrl: '',
+      notaDesrotulando: 5.0,
+    );
+    expect(produtoLixoOcr.possuiFichaCompleta, isFalse);
+    expect(Produto.ehLixoOcr(produtoLixoOcr.ingredientes), isTrue);
   });
 }
 

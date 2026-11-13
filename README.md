@@ -39,11 +39,11 @@ Tabela de mapeamento dos 8 requisitos obrigatórios exigidos no Guia da A3:
 
 ## 4. API e Dados Remotos
 - **Tipo de API:** API pública (sem necessidade de token ou chave de autenticação privada).
-- **URL Base:** `https://world.openfoodfacts.org`
+- **URL Base:** `https://br.openfoodfacts.org` (base brasileira oficial da Anvisa com fallback para `https://world.openfoodfacts.org`)
 - **Endpoint Principal:** `/cgi/search.pl`
-  - Exemplo de requisição: `https://world.openfoodfacts.org/cgi/search.pl?search_terms=oreo&search_simple=1&action=process&json=1`
+  - Exemplo de requisição: `https://br.openfoodfacts.org/cgi/search.pl?search_terms=biscoito&search_simple=1&action=process&json=1`
 - **Formato de Dados:** JSON (objeto com array `products`).
-- **Campos Mapeados:** `code`, `product_name`, `brands`, `ingredients_text_pt`, `nutriscore_grade`, `allergens`, `image_front_url`.
+- **Campos Mapeados:** `code`, `product_name`, `product_name_pt`, `brands`, `ingredients_text`, `ingredients_text_pt`, `nutriscore_grade`, `allergens`, `allergens_tags`, `traces`, `traces_tags`, `image_front_url`.
 
 ---
 
@@ -104,15 +104,16 @@ lib/
 
 ## 8. Observações
 - **Limitações:**
-  - A API pública do *Open Food Facts* é colaborativa mundialmente; alguns produtos cadastrados na Europa não possuem tradução completa dos ingredientes para o português.
-  - Requer conexão com a internet para realizar novas buscas no banco de dados remoto da API.
+  - A API pública do *Open Food Facts* é colaborativa e aberta à comunidade; fotos tiradas de embalagens por usuários podem conter ruídos de leitura óptica (OCR).
+  - Requer conexão com a internet para realizar novas buscas no banco de dados remoto da API (com suporte a modo offline demonstrativo).
 - **Bônus e Funcionalidades Extras Implementadas:**
+  - **Filtro Anti-Ruído de OCR (`ehLixoOcr`):** Algoritmo inteligente que identifica e descarta cadastros defeituosos da comunidade onde o OCR capturou tabelas nutricionais, rodapés ou endereços de fábricas no lugar dos ingredientes reais.
+  - **Padronização e Tradução de Alérgenos Anvisa:** Conversão automática de tags técnicas internacionais da API (ex.: `en:gluten`, `en:soybeans`, `en:milk`) para português claro e padronizado (`Glúten (Trigo)`, `Soja`, `Leite`, `Ovos`, etc.).
+  - **Tratativa e Higienização Rigorosa de Dados (Client-side Data Sanitization):** Filtro no `AppProvider` que exige ficha técnica completa (`possuiFichaCompleta`), valida idioma estritamente em português, elimina duplicatas de código de barras e prioriza correspondência exata de nomes na busca.
   - **Tema Claro e Escuro (Light/Dark Mode):** Alternância instantânea com botão de Sol/Lua presente em todas as 4 telas, com persistência da preferência no `SharedPreferences` e adaptação completa de contraste.
   - **Animações Interativas:** Revelação dinâmica e expansão suave das opções de intolerâncias (`AnimatedSize` + `AnimatedSlide`), sem efeito fade, garantindo fluidez e excelente UI/UX.
   - **Validação com Regex:** Validação de nome exigindo no mínimo 3 caracteres e bloqueando números ou caracteres especiais (`[!@#\$%^&*()_+={}\[\]...]`).
-  - **Tratativa e Higienização de Dados (Client-side Data Sanitization):** Filtro rigoroso no `AppProvider` que descarta alimentos incompletos (sem lista de ingredientes ou sem alérgenos/traços declarados), produtos em outros idiomas e duplicatas por código de barras, entregando sempre uma listagem limpa, confiável e em língua portuguesa.
   - **Selo de Qualidade Nutricional (0 a 10):** Algoritmo que converte o *Nutri-Score* internacional (letras A a E) em uma nota contínua de saudabilidade inspirada no aplicativo *Desrotulando*.
-  - **Dicionário Multilíngue de Ingredientes:** Mapeamento interno com mais de 30 termos técnicos em inglês, francês e alemão convertidos automaticamente para o português com formatação gramatical adequada.
   - **Cruzamento Inteligente de Sinônimos:** Reconhecimento avançado de derivados para Glúten, Lactose, Proteína do Leite (APLV), Soja e Oleaginosas.
   - **Modo Demonstração (Fallback Resiliente):** Botão de contingência para apresentação caso haja queda de rede na sala de aula.
 - **O que ficou para próximas versões:**

@@ -51,7 +51,8 @@ class Produto {
       alergenicosExtraidos = rawAllergens;
     } else if (json['allergens_tags'] is List && (json['allergens_tags'] as List).isNotEmpty) {
       alergenicosExtraidos = (json['allergens_tags'] as List)
-          .map((t) => t.toString().replaceAll(RegExp(r'^[a-z]{2}:'), ''))
+          .map((t) => _formatarTagAlergeno(t.toString()))
+          .toSet()
           .join(', ');
     }
 
@@ -62,7 +63,8 @@ class Produto {
       tracosExtraidos = rawTraces;
     } else if (json['traces_tags'] is List && (json['traces_tags'] as List).isNotEmpty) {
       tracosExtraidos = (json['traces_tags'] as List)
-          .map((t) => t.toString().replaceAll(RegExp(r'^[a-z]{2}:'), ''))
+          .map((t) => _formatarTagAlergeno(t.toString()))
+          .toSet()
           .join(', ');
     }
 
@@ -83,27 +85,6 @@ class Produto {
     String ingredientesGeral = json['ingredients_text']?.toString().trim() ?? '';
     String ingredientesFinais = ingredientesPt.isNotEmpty ? ingredientesPt : ingredientesGeral;
     ingredientesFinais = ingredientesFinais.replaceAll('_', '').trim();
-
-    // Se a API não preencheu o campo de alérgenos, mas eles foram informados no texto dos ingredientes (padrão Anvisa)
-    if (alergenicosExtraidos.isEmpty && ingredientesFinais.isNotEmpty) {
-      final ingLower = ingredientesFinais.toLowerCase();
-      if (ingLower.contains('alérgicos') ||
-          ingLower.contains('alergicos') ||
-          ingLower.contains('contém glúten') ||
-          ingLower.contains('contem gluten') ||
-          ingLower.contains('contém leite') ||
-          ingLower.contains('contem leite') ||
-          ingLower.contains('contém derivados') ||
-          ingLower.contains('contem derivados')) {
-        int idx = ingLower.indexOf('alérg');
-        if (idx == -1) idx = ingLower.indexOf('alerg');
-        if (idx == -1) idx = ingLower.indexOf('contém');
-        if (idx == -1) idx = ingLower.indexOf('contem');
-        if (idx != -1) {
-          alergenicosExtraidos = ingredientesFinais.substring(idx).trim();
-        }
-      }
-    }
 
     if (alergenicosExtraidos.isEmpty) {
       alergenicosExtraidos = 'Nenhum alergênico declarado';
@@ -129,12 +110,74 @@ class Produto {
     );
   }
 
+  // Detecta se a foto da embalagem foi lida incorretamente pelo OCR (tabela nutricional, endereço da fábrica ou ruído)
+  static bool ehLixoOcr(String texto) {
+    if (texto.isEmpty) return false;
+    final t = texto.toLowerCase();
+    return t.startsWith('anutricional') ||
+           t.startsWith('informação nutricional') ||
+           t.startsWith('informacao nutricional') ||
+           t.startsWith('tabela nutricional') ||
+           t.startsWith('porção de') ||
+           t.startsWith('porcao de') ||
+           t.startsWith('valor energético') ||
+           t.startsWith('valor energetico') ||
+           t.contains('vator energetico') ||
+           t.contains('zona rural') ||
+           t.contains('curtiu ego') ||
+           t.contains('emtandosoa');
+  }
+
+  // Traduz tags técnicas da API (ex: 'en:gluten', 'en:soybeans') para nomes amigáveis em português
+  static String _formatarTagAlergeno(String tag) {
+    final limpa = tag.replaceAll(RegExp(r'^[a-z]{2}:'), '').toLowerCase().trim();
+    switch (limpa) {
+      case 'gluten':
+      case 'wheat':
+        return 'Glúten (Trigo)';
+      case 'soybeans':
+      case 'soya':
+      case 'soy':
+        return 'Soja';
+      case 'milk':
+        return 'Leite';
+      case 'eggs':
+      case 'egg':
+        return 'Ovos';
+      case 'nuts':
+      case 'tree nuts':
+        return 'Castanhas / Nozes';
+      case 'peanuts':
+      case 'peanut':
+        return 'Amendoim';
+      case 'fish':
+        return 'Peixe';
+      case 'crustaceans':
+        return 'Crustáceos';
+      case 'mustard':
+        return 'Mostarda';
+      case 'sesame seeds':
+      case 'sesame':
+        return 'Gergelim';
+      case 'oats':
+        return 'Aveia';
+      case 'barley':
+        return 'Cevada';
+      case 'rye':
+        return 'Centeio';
+      default:
+        return limpa.isNotEmpty ? limpa[0].toUpperCase() + limpa.substring(1) : limpa;
+    }
+  }
+
   // REGRA DE QUALIDADE: Verifica se o produto possui todos os dados necessários (Nome, Ingredientes e Alérgenos)
   bool get possuiFichaCompleta {
     final nomeValido = nome.trim().isNotEmpty && nome != 'Nome não informado';
     final ingValido = ingredientes.trim().isNotEmpty &&
         !ingredientes.toLowerCase().contains('não informado') &&
-        !ingredientes.toLowerCase().contains('nao informado');
+        !ingredientes.toLowerCase().contains('nao informado') &&
+        !ehLixoOcr(ingredientes) &&
+        ingredientes.length >= 10;
     final allgValido = alergenicos.trim().isNotEmpty &&
         !alergenicos.toLowerCase().contains('nenhum alergênico declarado') &&
         !alergenicos.toLowerCase().contains('unknown');
